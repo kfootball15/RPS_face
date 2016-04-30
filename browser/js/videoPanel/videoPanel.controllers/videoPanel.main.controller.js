@@ -6,15 +6,16 @@ app.controller('videoPanelCtrl', function($scope, $state) {
         var socket = io(window.location.origin);
         // var canvas = document.getElementById('videoel');
         // var overlay = document.getElementById('overlay')
-        var picturebutton = document.getElementById('picturebutton');
+        var promptbutton = document.getElementById('promptButton');
         var vid = document.getElementById('videoel');
         var overlay = document.getElementById('overlay');
         var overlayCC = overlay.getContext('2d');
         var overlayInstructionA = document.getElementById('overlayInstructionA');
         // var overlayCCInstructionA = overlayInstructionA.getContext('2d')
-        $scope.showInstructionPrompt = false;
-        $scope.showInstructionA = true;
+        $scope.showInstructionPrompt = true;
+        $scope.showInstructionA = false;
         $scope.showInstructionB = false;
+        $scope.waitingForOpponent = false;
         $scope.infoRecieved = false;
         $scope.infoSent = false;
         $scope.alreadyDecided = false;
@@ -25,6 +26,10 @@ app.controller('videoPanelCtrl', function($scope, $state) {
         //     overlayInstructionA.style.visibility = showInstructions? 'visible' : 'visible';
         // }, false);
 
+        // $scope.runPrompt = function(){
+        //     $scope.canvasClickCounter++;
+        // }
+
 
         //Button/Div Event Listeners
         (function () {
@@ -32,25 +37,61 @@ app.controller('videoPanelCtrl', function($scope, $state) {
             $scope.canvasClickCounter = 0;
             overlay.addEventListener('click', function(){
                 if ($scope.canvasClickCounter === 0){
+                    $scope.showInstructionPrompt = false;
+                    $scope.showInstructionA = true
+                    console.log("Herllo")
+                    $scope.$digest()
+                    $scope.canvasClickCounter++;
+                }
+                else if ($scope.canvasClickCounter === 1){
                     $scope.startVideo();
                     $scope.showInstructionA = false;
-                    $scope.showInstructionB = true
+                    $scope.showInstructionB = true;
                     $scope.$digest()
                      // overlayInstructionA.style.visibility = showInstructions;
                     console.log("showInstructionA", $scope.showInstructionA)
                     console.log("showInstructionB", $scope.showInstructionB)
                     $scope.canvasClickCounter++;
                 }
-                else if ($scope.canvasClickCounter === 1){
+                else if ($scope.canvasClickCounter ===2) {
+                    $scope.showInstructionB = false;
+                    $scope.waitingForOpponent = true;
+                    $scope.$digest()
                     $scope.TakePicture();
                     $scope.infoSent = true;
                     $scope.canvasClickCounter++;
                 }
             });
 
-            picturebutton.addEventListener('click', function(){
-                console.log("Got into picture Button event");
-                socket.emit('transferInfo', {emotion: "happy"});
+            window.addEventListener('keydown', function(e){
+                var key = e.which || e.keyCode;
+                if(key === 13){
+                    if ($scope.canvasClickCounter === 0){
+                        $scope.showInstructionPrompt = false;
+                        $scope.showInstructionA = true
+                        console.log("Herllo")
+                        $scope.$digest()
+                        $scope.canvasClickCounter++;
+                    }
+                    else if ($scope.canvasClickCounter === 1){
+                        $scope.startVideo();
+                        $scope.showInstructionA = false;
+                        $scope.showInstructionB = true;
+                        $scope.$digest()
+                         // overlayInstructionA.style.visibility = showInstructions;
+                        console.log("showInstructionA", $scope.showInstructionA)
+                        console.log("showInstructionB", $scope.showInstructionB)
+                        $scope.canvasClickCounter++;
+                    }
+                    else if ($scope.canvasClickCounter ===2) {
+                        $scope.showInstructionB = false;
+                        $scope.waitingForOpponent = true;
+                        $scope.$digest()
+                        $scope.TakePicture();
+                        $scope.infoSent = true;
+                        $scope.canvasClickCounter++;
+                    }
+                }
             });
 
             // vid.addEventListener('conclusion', function (e) {
@@ -94,6 +135,7 @@ app.controller('videoPanelCtrl', function($scope, $state) {
             gameResult.yourInfo = $scope.myInfo;
             gameResult.image = createPicture($scope.myInfo).image;
             gameResult.theirInfo = $scope.theirInfo;
+            gameResult.prompt = $scope.promptInput
 
             if ($scope.myInfo.emotion === 'happy' && $scope.theirInfo.emotion === 'angry'){
                 gameResult.result = 'winner';
@@ -168,8 +210,8 @@ app.controller('videoPanelCtrl', function($scope, $state) {
 
         function enablestart() {
             var startbutton = document.getElementById('startbutton');
-            startbutton.value = "start";
-            startbutton.disabled = null;
+            // startbutton.value = "start";
+            // startbutton.disabled = null;
         }
 
         navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;

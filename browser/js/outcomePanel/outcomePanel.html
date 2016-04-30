@@ -1,8 +1,9 @@
 <body>
     <div id="outcomeDiv"> {{result}} </div>
-
     <div id="loser" ng-if="result === 'loser' "> You Lost. Prepare for humiliation... </div>
+    <div ng-show = "result==='loser'">You Will take your Embarassing picture in... {{ timerCounter }} </div>
     <div id="winner" ng-if="result === 'winner' "> You Won! </div>
+    <div id="winner" ng-if="result === 'winner' "> Wait for your Opponents Embarassing Picture </div>
     <div id="winner" ng-if="result === 'tie' "> You Tied! Play again</div>
 
     <div id="outcomeWinnerExp" ng-show="result === 'winner'">
