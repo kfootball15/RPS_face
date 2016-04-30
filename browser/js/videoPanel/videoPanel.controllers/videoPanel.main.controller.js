@@ -1,85 +1,127 @@
-app.controller('videoPanelCtrl', function($scope) {
+app.controller('videoPanelCtrl', function($scope, $state) {
 
 
         //SOCKETS
         // EMITTERS - my whiteboard.js
-        //theGamePanel = whiteboard
+        var socket = io(window.location.origin);
+        // var canvas = document.getElementById('videoel');
+        // var overlay = document.getElementById('overlay')
+        var picturebutton = document.getElementById('picturebutton');
+        var vid = document.getElementById('videoel');
+        var overlay = document.getElementById('overlay');
+        var overlayCC = overlay.getContext('2d');
+        $scope.infoRecieved = false;
+        $scope.infoSent = false;
+        $scope.alreadyDecided = false
+        $scope.myInfo;
 
-        window.theGamePanel = new window.EventEmitter();
 
+        //Button/Div Event Listeners
         (function () {
 
-            var canvas = document.getElementById('videoel');
-            console.log("Canvas Video Element", canvas)
-
-            canvas.addEventListener('conclusion', function (e) {
-                console.log("Sending conclusion Event!!!")
-
-                theGamePanel.send(gameImage, loser, true)
-            });
-
-            canvas.addEventListener('loser', function (e) {
-                console.log("Sending loser Event!!!")
-
-                theGamePanel.send(gameImage, loser, true)
-            });
-
-            canvas.addEventListener('mousedown', function (e) {
-                console.log("Sending winner Event!!!")
-
-                theGamePanel.send(gameImage, winner, true)
-            });
-
-
-            theGamePanel.send = function (gameImage, outcome, shouldBroadcast) {
-                // Draw the line between the start and end positions
-                // that is colored with the given color.
-                // If shouldBroadcast is truthy, we will emit a draw event to listeners
-                // with the start, end and color data.
-                if (shouldBroadcast) {
-                    // this event we emit is caught by the whiteboard object in app.js
-                    whiteboard.emit('sendGameImage', {}, 'winner');
+            var canvasClickCounter = 0;
+            overlay.addEventListener('click', function(){
+                if (canvasClickCounter === 0){
+                    $scope.startVideo();
+                    canvasClickCounter++;
                 }
-            };
+                else if (canvasClickCounter === 1){
+                    $scope.TakePicture();
+                    $scope.infoSent = true;
+                    canvasClickCounter++;
+                }
+            });
+
+            picturebutton.addEventListener('click', function(){
+                console.log("Got into picture Button event");
+                socket.emit('transferInfo', {emotion: "happy"});
+            });
+
+            vid.addEventListener('conclusion', function (e) {
+                console.log("Sending conclusion Event!!!");
+            });
 
         })();
 
-        //.on's - my app.js
-        //This is way more important
-        //This is where all of your event emmitters and listeners will go
-        var socket = io(window.location.origin);
-
-        socket.on('test', function(obj){
-            console.log("We have arrived", obj.emotion)
-        })
-
+        //Socket Event Listeners
         socket.on('connect', function(){
+            console.log('I have made a persistent two-way connection to the server!');
+        });
 
-              console.log('I have made a persistent two-way connection to the server!');
+        socket.on('infoReceived', function(){
+            $scope.infoRecieved = true;
+        });
 
+        socket.on('receiveFirst', function(obj){
+            $scope.theirInfo = obj;
+            console.log("recieveFirst", $scope.theirInfo)
+        });
 
-              // the draw event is emitted in whiteboard.js and caught here
-              theGamePanel.on('click', function (gameImage, outcome){
-                  socket.emit('winner')
-              })
-
-
-
-              socket.on('otherDraw', function(start, end, color){
-                theGamePanel.draw(start, end, color)
-              })
-
-              socket.on('sendGameImage', function(gameImage, outcome){
-                socket.emit('winner', start, end, color)
-              })
-
-        })
+        socket.on('decideWinner', function(obj){
+            if(obj) $scope.theirInfo = obj;
+            console.log("Got into decide Winner", $scope.theirInfo)
+            var gameObj = decideWinner();
+            $state.go('outcomePanel', {myParam: gameObj});
+        });
 
 
+        //Determine Outcome Function
+        function decideWinner() {
+            console.log("Opponents:", $scope.theirInfo)
+            console.log("My Own:", $scope.myInfo)
+            var gameResult = {}
 
-        //---------------------------------------------//
+            if ($scope.myInfo.emotion === 'happy' && $scope.theirInfo.emotion === 'angry'){
+                gameResult.result = 'winner';
+                gameResult.image =  createPicture($scope.myInfo).image
+                gameResult.theirInfo = $scope.theirInfo
+                console.log("YOU WON!!!!", gameResult);
+                return gameResult;
+            }
+            else if ($scope.myInfo.emotion === 'happy' && $scope.theirInfo.emotion === 'sad'){
+                gameResult.result = 'loser';
+                gameResult.image =  createPicture($scope.myInfo).image
+                gameResult.theirInfo = $scope.theirInfo
+                console.log("YOU LOST!!!!", gameResult);
+                return gameResult;
+            }
+            else if ($scope.myInfo.emotion === 'sad' && $scope.theirInfo.emotion === 'happy'){
+                gameResult.result = 'winner';
+                gameResult.image =  createPicture($scope.myInfo).image
+                gameResult.theirInfo = $scope.theirInfo
+                console.log("YOU WON!!!!", gameResult)
+                return gameResult;
+            }
+            else if ($scope.myInfo.emotion === 'sad' && $scope.theirInfo.emotion === 'angry'){
+                gameResult.result = 'loser';
+                gameResult.image =  createPicture($scope.myInfo).image
+                gameResult.theirInfo = $scope.theirInfo
+                console.log("YOU LOST!!!!", gameResult)
+                return gameResult;
+            }
+            else if ($scope.myInfo.emotion === 'angry' && $scope.theirInfo.emotion === 'sad'){
+                gameResult.result = 'winner';
+                gameResult.image =  createPicture($scope.myInfo).image
+                gameResult.theirInfo = $scope.theirInfo
+                console.log("YOU WON!!!!", gameResult)
+                return gameResult;
+            }
+            else if ($scope.myInfo.emotion === 'angry' && $scope.theirInfo.emotion === 'happy'){
+                gameResult.result = 'loser';
+                gameResult.image =  createPicture($scope.myInfo).image
+                gameResult.theirInfo = $scope.theirInfo
+                console.log("YOU LOST!!!!", gameResult)
+                return gameResult;
+            }
+            else {
+                gameResult.result = 'tie';
+                gameResult.image =  createPicture($scope.myInfo).image
+                gameResult.theirInfo = $scope.theirInfo
+                console.log("You Tied!!!!", gameResult)
+                return gameResult;
+            }
 
-
+        }
 
 
         // getUserMedia only works over https in Chrome 47+, so we redirect to https. Also notify user if running from file.
@@ -99,9 +141,6 @@ app.controller('videoPanelCtrl', function($scope) {
             var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
         })();
 
-        var vid = document.getElementById('videoel');
-        var overlay = document.getElementById('overlay');
-        var overlayCC = overlay.getContext('2d');
 
         /********** check and set up video/webcam **********/
 
@@ -113,7 +152,7 @@ app.controller('videoPanelCtrl', function($scope) {
 
         navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
         window.URL = window.URL || window.webkitURL || window.msURL || window.mozURL;
-        console.log("This THING:" navigator.getUserMedia)
+        //console.log("This THING:", navigator.getUserMedia)
 
         // check for camerasupport
         if (navigator.getUserMedia) {
@@ -145,7 +184,13 @@ app.controller('videoPanelCtrl', function($scope) {
 
         vid.addEventListener('canplay', enablestart, false);
 
+
+
+        /***********                            *************/
         /*********** setup of emotion detection *************/
+        /***********                            *************/
+
+
 
         var ctrack = new clm.tracker({useWebGL : true});
         ctrack.init(pModel);
@@ -172,11 +217,22 @@ app.controller('videoPanelCtrl', function($scope) {
             //meanPredict is reading the data from cp's current parameters and getting an emotion reading
             var cp = ctrack.getCurrentParameters();
             var er = ec.meanPredict(cp)
-            console.log("inside stopVideo Function", er)
+            // console.log("inside stopVideo Function", er)
 
             // create object to send to opponent/determine the victor
             var image = createPicture(er)
-            console.log("CreatePicture result", image)
+            // console.log("CreatePicture result", image)
+
+            //Emit the image Objec to the server
+            $scope.myInfo = image;
+            if($scope.infoRecieved) {
+                console.log("got into sendSecond elseif", image)
+                socket.emit('sendSecond', image)
+            }
+            else {
+                console.log("Got into sendFirst elseif", image)
+                socket.emit('sendFirst', image)
+            }
 
             // stop tracking
             ctrack.stop(vid);
@@ -187,7 +243,7 @@ app.controller('videoPanelCtrl', function($scope) {
         };
 
         function createPicture(er){
-            // return document.getElementById('videoel')
+
             // get the canvas context for drawing
             var gameImage = {};
 
@@ -196,12 +252,11 @@ app.controller('videoPanelCtrl', function($scope) {
             var thecanvas = document.getElementById('thecanvas');
             var context = thecanvas.getContext('2d');
 
-        // draw the video contents into the canvas x, y, width, height
+            // draw the video contents into the canvas x, y, width, height
             context.drawImage( video, 0, 0, thecanvas.width, thecanvas.height);
 
             gameImage.emotion = findEmotion(er)
-            gameImage.image =
-            console.log(gameImage)
+            gameImage.image = thecanvas.toDataURL()
 
             return gameImage
 
@@ -212,6 +267,8 @@ app.controller('videoPanelCtrl', function($scope) {
         // // set the source of the img tag
         //     video.setAttribute('src', dataURL);
         }
+
+
 
         function findEmotion(er) {
             var currentValue = 0
@@ -236,7 +293,6 @@ app.controller('videoPanelCtrl', function($scope) {
             //Get current paramters and predict emotions
             var cp = ctrack.getCurrentParameters();
             var er = ec.meanPredict(cp);
-            console.log(er)
             if (er) {
                 updateData(er);
                 for (var i = 0; i < er.length; i++) {

@@ -11,25 +11,25 @@ module.exports = function (server) {
 
     io = socketio(server);
 
+    var connectCounter = 0;
     io.on('connection', function (socket) {
         // Now have access to socket, wowzers!
-
-        //test emit
-        socket.emit('test', {emotion: "happy"});
+        console.log("we have another connection", socket.id)
 
         socket.on('disconnect', function(){
             console.log("See ya...");
         });
 
-        socket.on('winner', function(start, end, color){
-            console.log('catching the winner event here')
+        socket.on('sendFirst', function(obj){
+            socket.broadcast.emit('infoReceived');
+            socket.broadcast.emit('receiveFirst', obj);
+        })
 
-            // we need to emit an event all sockets except the socket that originally emitted the
-            // the draw data to the server
-            // broadcasting means sending a message to everyone else except for the
-            // the socket that starts it
-            socket.broadcast.emit('winner', start, end, color);
-        });
+        socket.on('sendSecond', function(obj){
+            // socket.broadcast.emit('infoReceived');
+            socket.emit('decideWinner')
+            socket.broadcast.emit('decideWinner', obj)
+        })
     });
 
     return io;
