@@ -10,25 +10,41 @@ app.controller('videoPanelCtrl', function($scope, $state) {
         var vid = document.getElementById('videoel');
         var overlay = document.getElementById('overlay');
         var overlayCC = overlay.getContext('2d');
+        var overlayInstructionA = document.getElementById('overlayInstructionA');
+        // var overlayCCInstructionA = overlayInstructionA.getContext('2d')
+        $scope.showInstructionPrompt = false;
+        $scope.showInstructionA = true;
+        $scope.showInstructionB = false;
         $scope.infoRecieved = false;
         $scope.infoSent = false;
-        $scope.alreadyDecided = false
+        $scope.alreadyDecided = false;
         $scope.myInfo;
+
+        // vid.addEventListener('progress', function() {
+        //     var show = vid.currentTime>=5 && vid.currentTime<10;
+        //     overlayInstructionA.style.visibility = showInstructions? 'visible' : 'visible';
+        // }, false);
 
 
         //Button/Div Event Listeners
         (function () {
 
-            var canvasClickCounter = 0;
+            $scope.canvasClickCounter = 0;
             overlay.addEventListener('click', function(){
-                if (canvasClickCounter === 0){
+                if ($scope.canvasClickCounter === 0){
                     $scope.startVideo();
-                    canvasClickCounter++;
+                    $scope.showInstructionA = false;
+                    $scope.showInstructionB = true
+                    $scope.$digest()
+                     // overlayInstructionA.style.visibility = showInstructions;
+                    console.log("showInstructionA", $scope.showInstructionA)
+                    console.log("showInstructionB", $scope.showInstructionB)
+                    $scope.canvasClickCounter++;
                 }
-                else if (canvasClickCounter === 1){
+                else if ($scope.canvasClickCounter === 1){
                     $scope.TakePicture();
                     $scope.infoSent = true;
-                    canvasClickCounter++;
+                    $scope.canvasClickCounter++;
                 }
             });
 
@@ -37,9 +53,14 @@ app.controller('videoPanelCtrl', function($scope, $state) {
                 socket.emit('transferInfo', {emotion: "happy"});
             });
 
-            vid.addEventListener('conclusion', function (e) {
-                console.log("Sending conclusion Event!!!");
-            });
+            // vid.addEventListener('conclusion', function (e) {
+            //     console.log("Sending conclusion Event!!!");
+            // });
+
+            // overlay.addEventListener('progress', function() {
+
+
+            // });
 
         })();
 
@@ -59,7 +80,7 @@ app.controller('videoPanelCtrl', function($scope, $state) {
 
         socket.on('decideWinner', function(obj){
             if(obj) $scope.theirInfo = obj;
-            console.log("Got into decide Winner", $scope.theirInfo)
+            console.log("Got into decide Winner", $scope.theirInfo);
             var gameObj = decideWinner();
             $state.go('outcomePanel', {myParam: gameObj});
         });
@@ -67,57 +88,58 @@ app.controller('videoPanelCtrl', function($scope, $state) {
 
         //Determine Outcome Function
         function decideWinner() {
-            console.log("Opponents:", $scope.theirInfo)
-            console.log("My Own:", $scope.myInfo)
-            var gameResult = {}
+            console.log("Opponents:", $scope.theirInfo);
+            console.log("My Own:", $scope.myInfo);
+            var gameResult = {};
+            gameResult.yourInfo = $scope.myInfo;
+            gameResult.image = createPicture($scope.myInfo).image;
+            gameResult.theirInfo = $scope.theirInfo;
 
             if ($scope.myInfo.emotion === 'happy' && $scope.theirInfo.emotion === 'angry'){
                 gameResult.result = 'winner';
-                gameResult.image =  createPicture($scope.myInfo).image
-                gameResult.theirInfo = $scope.theirInfo
+                gameResult.yourInfo.verb = 'happiness';
+                gameResult.theirInfo.verb = 'anger';
                 console.log("YOU WON!!!!", gameResult);
                 return gameResult;
             }
             else if ($scope.myInfo.emotion === 'happy' && $scope.theirInfo.emotion === 'sad'){
                 gameResult.result = 'loser';
-                gameResult.image =  createPicture($scope.myInfo).image
-                gameResult.theirInfo = $scope.theirInfo
+                gameResult.yourInfo.verb = 'happiness';
+                gameResult.theirInfo.verb = 'sadness';
                 console.log("YOU LOST!!!!", gameResult);
                 return gameResult;
             }
             else if ($scope.myInfo.emotion === 'sad' && $scope.theirInfo.emotion === 'happy'){
                 gameResult.result = 'winner';
-                gameResult.image =  createPicture($scope.myInfo).image
-                gameResult.theirInfo = $scope.theirInfo
-                console.log("YOU WON!!!!", gameResult)
+                gameResult.yourInfo.verb = 'sadness';
+                gameResult.theirInfo.verb = 'happiness';
+                console.log("YOU WON!!!!", gameResult);
                 return gameResult;
             }
             else if ($scope.myInfo.emotion === 'sad' && $scope.theirInfo.emotion === 'angry'){
                 gameResult.result = 'loser';
-                gameResult.image =  createPicture($scope.myInfo).image
-                gameResult.theirInfo = $scope.theirInfo
-                console.log("YOU LOST!!!!", gameResult)
+                gameResult.yourInfo.verb = 'sadness';
+                gameResult.theirInfo.verb = 'anger';
+                console.log("YOU LOST!!!!", gameResult);
                 return gameResult;
             }
             else if ($scope.myInfo.emotion === 'angry' && $scope.theirInfo.emotion === 'sad'){
                 gameResult.result = 'winner';
-                gameResult.image =  createPicture($scope.myInfo).image
-                gameResult.theirInfo = $scope.theirInfo
-                console.log("YOU WON!!!!", gameResult)
+                gameResult.yourInfo.verb = 'anger';
+                gameResult.theirInfo.verb = 'sadness';
+                console.log("YOU WON!!!!", gameResult);
                 return gameResult;
             }
             else if ($scope.myInfo.emotion === 'angry' && $scope.theirInfo.emotion === 'happy'){
                 gameResult.result = 'loser';
-                gameResult.image =  createPicture($scope.myInfo).image
-                gameResult.theirInfo = $scope.theirInfo
-                console.log("YOU LOST!!!!", gameResult)
+                gameResult.yourInfo.verb = 'anger';
+                gameResult.theirInfo.verb = 'happiness';
+                console.log("YOU LOST!!!!", gameResult);
                 return gameResult;
             }
             else {
                 gameResult.result = 'tie';
-                gameResult.image =  createPicture($scope.myInfo).image
-                gameResult.theirInfo = $scope.theirInfo
-                console.log("You Tied!!!!", gameResult)
+                console.log("You Tied!!!!", gameResult);
                 return gameResult;
             }
 
@@ -197,6 +219,7 @@ app.controller('videoPanelCtrl', function($scope, $state) {
 
         $scope.startVideo = function() {
             $scope.drawLoopVar = true;
+            $scope.drawInstructionsVar = true
             // start video
             vid.play();
             // start tracking
@@ -211,6 +234,7 @@ app.controller('videoPanelCtrl', function($scope, $state) {
         $scope.TakePicture = function() {
             //Stop the drawLoop function by setting this to false
             $scope.drawLoopVar = false;
+            $scope.drawInstructionsVar = false;
 
             //Get current emotion parameters from CP
             //ec is an instance of emotionclassifier()
@@ -280,6 +304,30 @@ app.controller('videoPanelCtrl', function($scope, $state) {
                 }
             }
             return currentEmotion
+        }
+
+        function drawInstructions() {
+            if($scope.drawInstructionsVar) requestAnimFrame(drawInstructions);
+            overlayCCInstructionA.clearRect(0, 0, 400, 300);
+            ctrack.draw(overlayCCInstructionA)
+            //psrElement.innerHTML = "score :" + ctrack.getScore().toFixed(4);
+            // if (ctrack.getCurrentPosition()) {
+            //     ctrack.draw(overlay);
+            // }
+
+            //Get current paramters and predict emotions
+            // var cp = ctrack.getCurrentParameters();
+            // var er = ec.meanPredict(cp);
+            // if (er) {
+            //     updateData(er);
+            //     for (var i = 0; i < er.length; i++) {
+            //         if (er[i].value > 0.4) {
+            //             document.getElementById('icon'+(i+1)).style.visibility = 'visible';
+            //         } else {
+            //             document.getElementById('icon'+(i+1)).style.visibility = 'hidden';
+            //         }
+            //     }
+            // }
         }
 
         function drawLoop() {

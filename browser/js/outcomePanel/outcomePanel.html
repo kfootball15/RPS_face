@@ -1,5 +1,18 @@
 <body>
-    GameObject is {{gameObject}}
+    <div id="outcomeDiv"> {{result}} </div>
+
+    <div id="loser" ng-if="result === 'loser' "> You Lost. Prepare for humiliation... </div>
+    <div id="winner" ng-if="result === 'winner' "> You Won! </div>
+    <div id="winner" ng-if="result === 'tie' "> You Tied! Play again</div>
+
+    <div id="outcomeWinnerExp" ng-show="result === 'winner'">
+        Your {{gameObj.yourInfo.verb}} has conquered their {{gameObj.theirInfo.verb}}
+    </div>
+    <div id="outcomeLoserExp" ng-show="result === 'loser'">
+        Their {{gameObj.theirInfo.verb}} has conquered your {{gameObj.yourInfo.verb}}
+    </div>
+
+    <canvas id="theirCanvas" width="400" height="300"></canvas>
+    <canvas id="myCanvas" width="400" height="300"></canvas>
 </body>
-<canvas id="thecanvas" width="400" height="300"></canvas>
 
