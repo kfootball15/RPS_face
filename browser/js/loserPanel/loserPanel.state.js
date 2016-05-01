@@ -6,5 +6,10 @@ app.config(function ($stateProvider) {
         },
         controller: 'loserPanelCtrl',
         templateUrl: '/js/loserPanel/loserPanel.html',
+        resolve: {
+            loggedInUser: function(AuthService){
+                return AuthService.getLoggedInUser();
+            }
+        },
     });
 });

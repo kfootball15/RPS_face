@@ -8,13 +8,20 @@ var schema = new mongoose.Schema({
     email: {
         type: String
     },
+    userName: {
+        type: String,
+        unique: true
+    },
     password: {
         type: String
     },
     salt: {
         type: String
     },
-    UserDogTags: { type: [String] }
+    UserDogTags: {
+        type: [mongoose.Schema.Types.ObjectId],
+        ref: 'DogTag'
+    }
 
 });
 

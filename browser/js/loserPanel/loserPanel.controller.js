@@ -1,56 +1,34 @@
-app.controller('loserPanelCtrl', function($scope, $stateParams) {
+app.controller('loserPanelCtrl', function($scope, $state, $stateParams, DogTagsFactory, loggedInUser) {
 
+    //Logged In User
+    $scope.loggedInUser = loggedInUser
+    var dogTag = {}
+    dogTag.opponent = $scope.loggedInUser._id
+
+    //The GameObj and result
     $scope.gameObj= $stateParams.myParam
-    console.log("gameObj in loserPanel", $scope.gameObj)
-
     $scope.result = $stateParams.myParam.result
+    dogTag.user = $scope.gameObj.theirInfo.id
 
-    var outcomeDiv = document.getElementById('outcomeDiv');
+    console.log("LoserPanel GameObj:", $scope.gameObj)
 
-    //THEIR
-    var theirCanvas = document.getElementById('theirCanvas');
-    var theirCtx = theirCanvas.getContext('2d');
-    var theirImage = new Image();
-    theirImage.src = $scope.gameObj.theirInfo.image;
 
-    theirCtx.drawImage(theirImage, 0, 0)
+    //CREATE A DOG TAG CREATOR FUCNTION!!!!
+        //Have Losers USERID, winners USERID, The losing Image
 
-    //ME
-    var myCanvas = document.getElementById('myCanvas');
-    var myCtx = myCanvas.getContext('2d');
-    var myImage = new Image();
-    myImage.src = $scope.gameObj.image;
 
-    myCtx.drawImage(myImage, 0, 0);
 
 
 
     //SOCKETS
-    // EMITTERS - my whiteboard.js
     var socket = io(window.location.origin);
-    // var canvas = document.getElementById('videoel');
-    // var overlay = document.getElementById('overlay')
     var promptbutton = document.getElementById('promptButton');
     var vid = document.getElementById('videoel');
     var overlay = document.getElementById('overlay');
-    var overlayCC = overlay.getContext('2d');
     var overlayInstructionA = document.getElementById('overlayInstructionA');
-    // var overlayCCInstructionA = overlayInstructionA.getContext('2d')
     $scope.showInstructionB = true;
     $scope.waitingForOpponent = false;
-    $scope.infoRecieved = false;
-    $scope.infoSent = false;
-    $scope.alreadyDecided = false;
-    $scope.myInfo;
 
-    // vid.addEventListener('progress', function() {
-    //     var show = vid.currentTime>=5 && vid.currentTime<10;
-    //     overlayInstructionA.style.visibility = showInstructions? 'visible' : 'visible';
-    // }, false);
-
-    // $scope.runPrompt = function(){
-    //     $scope.canvasClickCounter++;
-    // }
 
 
     //Button/Div Event Listeners
@@ -63,7 +41,6 @@ app.controller('loserPanelCtrl', function($scope, $stateParams) {
                 $scope.waitingForOpponent = true;
                 $scope.$digest()
                 $scope.TakePicture();
-                $scope.infoSent = true;
                 $scope.canvasClickCounter++;
             }
         });
@@ -76,7 +53,6 @@ app.controller('loserPanelCtrl', function($scope, $stateParams) {
                     $scope.waitingForOpponent = true;
                     $scope.$digest()
                     $scope.TakePicture();
-                    $scope.infoSent = true;
                     $scope.canvasClickCounter++;
                 }
             }
@@ -84,107 +60,61 @@ app.controller('loserPanelCtrl', function($scope, $stateParams) {
 
     })();
 
-    //Socket Event Listeners
-    socket.on('connect', function(){
-        console.log('I have made a persistent two-way connection to the server!');
-    });
 
-    socket.on('infoReceived', function(){
-        $scope.infoRecieved = true;
-    });
+    //State Changes
+    socket.on('goHome', function(){
 
-    socket.on('receiveFirst', function(obj){
-        $scope.theirInfo = obj;
-        console.log("recieveFirst", $scope.theirInfo)
-    });
-
-    socket.on('decideWinner', function(obj){
-        if(obj) $scope.theirInfo = obj;
-        console.log("Got into decide Winner", $scope.theirInfo);
-        var gameObj = decideWinner();
-        $state.go('outcomePanel', {myParam: gameObj});
-    });
-
-    socket.on('goToDogTagState', function(gameObj){
-        //Need to create an emitter on the server
-        //Need to create an emitter in the LoserPanel for after the loser takes his/her picture
-        //Winner (and only winner, who would be the only one currently in this state) should $state.go to
-            //his dog tags page
-        //Persist the opponents dog tag to a database
-        //Loser should have a listener in the Loser Panel (could listen for the same event) and $state.go to his opponents dog tag state
-
-
-        //Database post request first
-
-        //$state.go to the dogTag state
-        console.log("Got into goToDogTagState socket on losePanel", gameObj)
+        console.log("Got into goHome socket on losePanel")
         $state.go('home');
 
     });
 
 
+    /***********                            *************/
+    /*********** setup of emotion detection *************/
+    /***********                            *************/
 
-    //Determine Outcome Function
-    function decideWinner() {
-        console.log("Opponents:", $scope.theirInfo);
-        console.log("My Own:", $scope.myInfo);
-        var gameResult = {};
-        gameResult.yourInfo = $scope.myInfo;
-        gameResult.image = createPicture($scope.myInfo).image;
-        gameResult.theirInfo = $scope.theirInfo;
-        gameResult.prompt = $scope.promptInput
+    $scope.startVideo = function() {
+        // start video
+        vid.play();
 
-        if ($scope.myInfo.emotion === 'happy' && $scope.theirInfo.emotion === 'angry'){
-            gameResult.result = 'winner';
-            gameResult.yourInfo.verb = 'happiness';
-            gameResult.theirInfo.verb = 'anger';
-            console.log("YOU WON!!!!", gameResult);
-            return gameResult;
-        }
-        else if ($scope.myInfo.emotion === 'happy' && $scope.theirInfo.emotion === 'sad'){
-            gameResult.result = 'loser';
-            gameResult.yourInfo.verb = 'happiness';
-            gameResult.theirInfo.verb = 'sadness';
-            console.log("YOU LOST!!!!", gameResult);
-            return gameResult;
-        }
-        else if ($scope.myInfo.emotion === 'sad' && $scope.theirInfo.emotion === 'happy'){
-            gameResult.result = 'winner';
-            gameResult.yourInfo.verb = 'sadness';
-            gameResult.theirInfo.verb = 'happiness';
-            console.log("YOU WON!!!!", gameResult);
-            return gameResult;
-        }
-        else if ($scope.myInfo.emotion === 'sad' && $scope.theirInfo.emotion === 'angry'){
-            gameResult.result = 'loser';
-            gameResult.yourInfo.verb = 'sadness';
-            gameResult.theirInfo.verb = 'anger';
-            console.log("YOU LOST!!!!", gameResult);
-            return gameResult;
-        }
-        else if ($scope.myInfo.emotion === 'angry' && $scope.theirInfo.emotion === 'sad'){
-            gameResult.result = 'winner';
-            gameResult.yourInfo.verb = 'anger';
-            gameResult.theirInfo.verb = 'sadness';
-            console.log("YOU WON!!!!", gameResult);
-            return gameResult;
-        }
-        else if ($scope.myInfo.emotion === 'angry' && $scope.theirInfo.emotion === 'happy'){
-            gameResult.result = 'loser';
-            gameResult.yourInfo.verb = 'anger';
-            gameResult.theirInfo.verb = 'happiness';
-            console.log("YOU LOST!!!!", gameResult);
-            return gameResult;
-        }
-        else {
-            gameResult.result = 'tie';
-            console.log("You Tied!!!!", gameResult);
-            return gameResult;
-        }
+    };
 
+
+
+    //The MEAT AND POTATOES!!! Takes a picture and creates an object
+    $scope.TakePicture = function() {
+
+        // create object to send to opponent/determine the victor
+        var image = createPicture().image;
+        $scope.gameObj.loserImage = image;
+        socket.emit('sendDogTag', $scope.gameObj);
+
+        // stop video
+        vid.pause();
+    };
+
+    function createPicture(){
+
+        var imageObj = {};
+
+        //Grab Appropriate Elements
+        var video = document.getElementById('videoel');
+        var thecanvas = document.getElementById('thecanvas');
+        var context = thecanvas.getContext('2d');
+
+        // draw the video contents into the canvas x, y, width, height
+        context.drawImage( video, 0, 0, thecanvas.width, thecanvas.height);
+        imageObj.image = thecanvas.toDataURL()
+        return imageObj
     }
 
 
+
+
+    //--------                    ---------//
+    //-------- GET WEBCAM WORKING ---------//
+    //--------                    ---------//
     // getUserMedia only works over https in Chrome 47+, so we redirect to https. Also notify user if running from file.
     if (window.location.protocol == "file:") {
         alert("You seem to be running this example directly from a file. Note that these examples only work when served from a server or localhost due to canvas cross-domain restrictions.");
@@ -228,7 +158,7 @@ app.controller('loserPanelCtrl', function($scope, $stateParams) {
         };
 
         navigator.getUserMedia(videoSelector, function( stream ) {
-            if (vid.mozCaptureStream) {
+               if (vid.mozCaptureStream) {
                 vid.mozSrcObject = stream;
             } else {
                 vid.src = (window.URL && window.URL.createObjectURL(stream)) || stream;
@@ -247,237 +177,6 @@ app.controller('loserPanelCtrl', function($scope, $stateParams) {
 
 
 
-    /***********                            *************/
-    /*********** setup of emotion detection *************/
-    /***********                            *************/
-
-
-
-    var ctrack = new clm.tracker({useWebGL : true});
-    ctrack.init(pModel);
-
-    $scope.startVideo = function() {
-        $scope.drawLoopVar = true;
-        $scope.drawInstructionsVar = true
-        // start video
-        vid.play();
-        // start tracking
-        ctrack.start(vid);
-        // start loop to draw face
-        drawLoop();
-    };
-
-    console.log(ctrack);
-
-    //The MEAT AND POTATOES!!! Takes a picture and creates an object
-    $scope.TakePicture = function() {
-        //Stop the drawLoop function by setting this to false
-        $scope.drawLoopVar = false;
-        $scope.drawInstructionsVar = false;
-
-        //Get current emotion parameters from CP
-        //ec is an instance of emotionclassifier()
-        //meanPredict is reading the data from cp's current parameters and getting an emotion reading
-        var cp = ctrack.getCurrentParameters();
-        var er = ec.meanPredict(cp);
-        // console.log("inside stopVideo Function", er)
-
-        // create object to send to opponent/determine the victor
-        var image = createPicture(er).image;
-        // console.log("CreatePicture result", image)
-
-        //Emit the image Objec to the server
-        $scope.gameObj.loserImage = image;
-
-        //Emitter for after Loser Takes Picture
-        socket.emit('sendDogTag', $scope.gameObj);
-
-        // stop tracking
-        ctrack.stop(vid);
-        // reset tracking
-        ctrack.reset()
-        // stop video
-        vid.pause();
-    };
-
-    function createPicture(er){
-
-        // get the canvas context for drawing
-        var gameImage = {};
-
-        //Grab Appropriate Elements
-        var video = document.getElementById('videoel');
-        var thecanvas = document.getElementById('thecanvas');
-        var context = thecanvas.getContext('2d');
-
-        // draw the video contents into the canvas x, y, width, height
-        context.drawImage( video, 0, 0, thecanvas.width, thecanvas.height);
-
-        gameImage.emotion = findEmotion(er)
-        gameImage.image = thecanvas.toDataURL()
-
-        console.log("createPicture Loser", gameImage)
-        return gameImage
-
-    // // get the image data from the canvas object
-    //     var dataURL = thecanvas.toDataURL();
-    //     console.log("dataURL", dataURL)
-
-    // // set the source of the img tag
-    //     video.setAttribute('src', dataURL);
-    }
-
-
-
-    function findEmotion(er) {
-        var currentValue = 0
-        var currentEmotion;
-        for (var i = 0; i < er.length; i++) {
-            if(er[i].value > currentValue) {
-                currentValue = er[i].value;
-                currentEmotion = er[i].emotion
-            }
-        }
-        return currentEmotion
-    }
-
-    function drawInstructions() {
-        if($scope.drawInstructionsVar) requestAnimFrame(drawInstructions);
-        overlayCCInstructionA.clearRect(0, 0, 400, 300);
-        ctrack.draw(overlayCCInstructionA)
-        //psrElement.innerHTML = "score :" + ctrack.getScore().toFixed(4);
-        // if (ctrack.getCurrentPosition()) {
-        //     ctrack.draw(overlay);
-        // }
-
-        //Get current paramters and predict emotions
-        // var cp = ctrack.getCurrentParameters();
-        // var er = ec.meanPredict(cp);
-        // if (er) {
-        //     updateData(er);
-        //     for (var i = 0; i < er.length; i++) {
-        //         if (er[i].value > 0.4) {
-        //             document.getElementById('icon'+(i+1)).style.visibility = 'visible';
-        //         } else {
-        //             document.getElementById('icon'+(i+1)).style.visibility = 'hidden';
-        //         }
-        //     }
-        // }
-    }
-
-    function drawLoop() {
-        if($scope.drawLoopVar) requestAnimFrame(drawLoop);
-        overlayCC.clearRect(0, 0, 400, 300);
-        //psrElement.innerHTML = "score :" + ctrack.getScore().toFixed(4);
-        if (ctrack.getCurrentPosition()) {
-            ctrack.draw(overlay);
-        }
-
-        //Get current paramters and predict emotions
-        var cp = ctrack.getCurrentParameters();
-        var er = ec.meanPredict(cp);
-        if (er) {
-            updateData(er);
-            for (var i = 0; i < er.length; i++) {
-                if (er[i].value > 0.4) {
-                    document.getElementById('icon'+(i+1)).style.visibility = 'visible';
-                } else {
-                    document.getElementById('icon'+(i+1)).style.visibility = 'hidden';
-                }
-            }
-        }
-    }
-
-    var ec = new emotionClassifier();
-    ec.init(emotionModel);
-    var emotionData = ec.getBlank();
-
-    /************ d3 code for barchart *****************/
-
-    var margin = {top : 20, right : 20, bottom : 10, left : 40},
-        width = 400 - margin.left - margin.right,
-        height = 100 - margin.top - margin.bottom;
-
-    var barWidth = 30;
-
-    var formatPercent = d3.format(".0%");
-
-    var x = d3.scale.linear()
-        .domain([0, ec.getEmotions().length]).range([margin.left, width+margin.left]);
-
-    var y = d3.scale.linear()
-        .domain([0,1]).range([0, height]);
-
-    var svg = d3.select("#emotion_chart").append("svg")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
-
-    svg.selectAll("rect").
-      data(emotionData).
-      enter().
-      append("svg:rect").
-      attr("x", function(datum, index) { return x(index); }).
-      attr("y", function(datum) { return height - y(datum.value); }).
-      attr("height", function(datum) { return y(datum.value); }).
-      attr("width", barWidth).
-      attr("fill", "#2d578b");
-
-    svg.selectAll("text.labels").
-      data(emotionData).
-      enter().
-      append("svg:text").
-      attr("x", function(datum, index) { return x(index) + barWidth; }).
-      attr("y", function(datum) { return height - y(datum.value); }).
-      attr("dx", -barWidth/2).
-      attr("dy", "1.2em").
-      attr("text-anchor", "middle").
-      text(function(datum) { return datum.value; }).
-      attr("fill", "white").
-      attr("class", "labels");
-
-    svg.selectAll("text.yAxis").
-      data(emotionData).
-      enter().append("svg:text").
-      attr("x", function(datum, index) { return x(index) + barWidth; }).
-      attr("y", height).
-      attr("dx", -barWidth/2).
-      attr("text-anchor", "middle").
-      attr("style", "font-size: 12").
-      text(function(datum) { return datum.emotion; }).
-      attr("transform", "translate(0, 18)").
-      attr("class", "yAxis");
-
-    function updateData(data) {
-        // update
-        var rects = svg.selectAll("rect")
-            .data(data)
-            .attr("y", function(datum) { return height - y(datum.value); })
-            .attr("height", function(datum) { return y(datum.value); });
-        var texts = svg.selectAll("text.labels")
-            .data(data)
-            .attr("y", function(datum) { return height - y(datum.value); })
-            .text(function(datum) { return datum.value.toFixed(1); });
-
-        // enter
-        rects.enter().append("svg:rect");
-        texts.enter().append("svg:text");
-
-        // exit
-        rects.exit().remove();
-        texts.exit().remove();
-    }
-
-    /******** stats ********/
-    var stats = new Stats();
-
-    stats.domElement.style.position = 'absolute';
-    stats.domElement.style.top = '0px';
-    document.getElementById('container').appendChild( stats.domElement );
-
-    // update stats on every iteration
-    document.addEventListener('clmtrackrIteration', function(event) {
-        stats.update();
-    }, false);
 
 
 });

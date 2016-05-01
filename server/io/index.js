@@ -34,9 +34,16 @@ module.exports = function (server) {
             //This object needs to have:
                 //- Winners USERID
                 //- Embarassing Photo
-            console.log("Serverside sendDogTag", gameObj)
-            socket.emit('goToDogTagState', gameObj)
-            socket.broadcast.emit('goToDogTagState', gameObj)
+            // console.log("Serverside sendDogTag", gameObj)
+            var winnersGameObj = {}
+            winnersGameObj.myInfo = gameObj.theirInfo
+            winnersGameObj.theirInfo = gameObj.myInfo
+            winnersGameObj.dogTagImage = gameObj.loserImage
+            winnersGameObj.prompt = gameObj.prompt
+            // console.log("winnersGameObj:", winnersGameObj)
+
+            socket.emit('goHome')
+            socket.broadcast.emit('goToDogTagState', winnersGameObj)
         });
     });
 

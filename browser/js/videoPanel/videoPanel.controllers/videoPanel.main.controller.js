@@ -1,4 +1,4 @@
-app.controller('videoPanelCtrl', function($scope, $state) {
+app.controller('videoPanelCtrl', function($scope, $state, loggedInUser) {
 
 
         //SOCKETS
@@ -12,6 +12,7 @@ app.controller('videoPanelCtrl', function($scope, $state) {
         var overlayCC = overlay.getContext('2d');
         var overlayInstructionA = document.getElementById('overlayInstructionA');
         // var overlayCCInstructionA = overlayInstructionA.getContext('2d')
+        $scope.loggedInUser = loggedInUser;
         $scope.showInstructionPrompt = true;
         $scope.showInstructionA = false;
         $scope.showInstructionB = false;
@@ -83,7 +84,7 @@ app.controller('videoPanelCtrl', function($scope, $state) {
                         console.log("showInstructionB", $scope.showInstructionB)
                         $scope.canvasClickCounter++;
                     }
-                    else if ($scope.canvasClickCounter ===2) {
+                    else if ($scope.canvasClickCounter === 2) {
                         $scope.showInstructionB = false;
                         $scope.waitingForOpponent = true;
                         $scope.$digest()
@@ -114,23 +115,23 @@ app.controller('videoPanelCtrl', function($scope, $state) {
             $scope.infoRecieved = true;
         });
 
-        socket.on('receiveFirst', function(obj){
-            $scope.theirInfo = obj;
+        socket.on('receiveFirst', function(gameObj){
+            $scope.theirInfo = gameObj;
             console.log("recieveFirst", $scope.theirInfo)
         });
 
         socket.on('decideWinner', function(obj){
             if(obj) $scope.theirInfo = obj;
-            console.log("Got into decide Winner", $scope.theirInfo);
             var gameObj = decideWinner();
+            console.log("Got into decide Winner", gameObj);
             $state.go('outcomePanel', {myParam: gameObj});
         });
 
 
         //Determine Outcome Function
         function decideWinner() {
-            console.log("Opponents:", $scope.theirInfo);
-            console.log("My Own:", $scope.myInfo);
+            console.log("theirInfo:", $scope.theirInfo);
+            console.log("myInfo:", $scope.myInfo);
             var gameResult = {};
             gameResult.yourInfo = $scope.myInfo;
             gameResult.image = createPicture($scope.myInfo).image;
@@ -139,6 +140,7 @@ app.controller('videoPanelCtrl', function($scope, $state) {
 
             if ($scope.myInfo.emotion === 'happy' && $scope.theirInfo.emotion === 'angry'){
                 gameResult.result = 'winner';
+                gameResult.yourInfo.result = 'winner';
                 gameResult.yourInfo.verb = 'happiness';
                 gameResult.theirInfo.verb = 'anger';
                 console.log("YOU WON!!!!", gameResult);
@@ -146,6 +148,7 @@ app.controller('videoPanelCtrl', function($scope, $state) {
             }
             else if ($scope.myInfo.emotion === 'happy' && $scope.theirInfo.emotion === 'sad'){
                 gameResult.result = 'loser';
+                gameResult.yourInfo.result = 'loser';
                 gameResult.yourInfo.verb = 'happiness';
                 gameResult.theirInfo.verb = 'sadness';
                 console.log("YOU LOST!!!!", gameResult);
@@ -153,6 +156,7 @@ app.controller('videoPanelCtrl', function($scope, $state) {
             }
             else if ($scope.myInfo.emotion === 'sad' && $scope.theirInfo.emotion === 'happy'){
                 gameResult.result = 'winner';
+                gameResult.yourInfo.result = 'winner';
                 gameResult.yourInfo.verb = 'sadness';
                 gameResult.theirInfo.verb = 'happiness';
                 console.log("YOU WON!!!!", gameResult);
@@ -160,6 +164,7 @@ app.controller('videoPanelCtrl', function($scope, $state) {
             }
             else if ($scope.myInfo.emotion === 'sad' && $scope.theirInfo.emotion === 'angry'){
                 gameResult.result = 'loser';
+                gameResult.yourInfo.result = 'loser';
                 gameResult.yourInfo.verb = 'sadness';
                 gameResult.theirInfo.verb = 'anger';
                 console.log("YOU LOST!!!!", gameResult);
@@ -167,6 +172,7 @@ app.controller('videoPanelCtrl', function($scope, $state) {
             }
             else if ($scope.myInfo.emotion === 'angry' && $scope.theirInfo.emotion === 'sad'){
                 gameResult.result = 'winner';
+                gameResult.yourInfo.result = 'winner';
                 gameResult.yourInfo.verb = 'anger';
                 gameResult.theirInfo.verb = 'sadness';
                 console.log("YOU WON!!!!", gameResult);
@@ -174,6 +180,7 @@ app.controller('videoPanelCtrl', function($scope, $state) {
             }
             else if ($scope.myInfo.emotion === 'angry' && $scope.theirInfo.emotion === 'happy'){
                 gameResult.result = 'loser';
+                gameResult.yourInfo.result = 'loser';
                 gameResult.yourInfo.verb = 'anger';
                 gameResult.theirInfo.verb = 'happiness';
                 console.log("YOU LOST!!!!", gameResult);
@@ -283,21 +290,20 @@ app.controller('videoPanelCtrl', function($scope, $state) {
             //meanPredict is reading the data from cp's current parameters and getting an emotion reading
             var cp = ctrack.getCurrentParameters();
             var er = ec.meanPredict(cp)
-            // console.log("inside stopVideo Function", er)
 
             // create object to send to opponent/determine the victor
-            var image = createPicture(er)
-            // console.log("CreatePicture result", image)
+            var gameObj = createPicture(er)
 
-            //Emit the image Objec to the server
-            $scope.myInfo = image;
+            //Emit the gameObj Objec to the server
+            $scope.myInfo = gameObj;
+            $scope.myInfo.id = $scope.loggedInUser._id
             if($scope.infoRecieved) {
-                console.log("got into sendSecond elseif", image)
-                socket.emit('sendSecond', image)
+                console.log("got into sendSecond elseif", gameObj)
+                socket.emit('sendSecond', gameObj)
             }
             else {
-                console.log("Got into sendFirst elseif", image)
-                socket.emit('sendFirst', image)
+                console.log("Got into sendFirst elseif", gameObj)
+                socket.emit('sendFirst', gameObj)
             }
 
             // stop tracking
@@ -326,12 +332,6 @@ app.controller('videoPanelCtrl', function($scope, $state) {
 
             return gameImage
 
-        // // get the image data from the canvas object
-        //     var dataURL = thecanvas.toDataURL();
-        //     console.log("dataURL", dataURL)
-
-        // // set the source of the img tag
-        //     video.setAttribute('src', dataURL);
         }
 
 
@@ -352,24 +352,6 @@ app.controller('videoPanelCtrl', function($scope, $state) {
             if($scope.drawInstructionsVar) requestAnimFrame(drawInstructions);
             overlayCCInstructionA.clearRect(0, 0, 400, 300);
             ctrack.draw(overlayCCInstructionA)
-            //psrElement.innerHTML = "score :" + ctrack.getScore().toFixed(4);
-            // if (ctrack.getCurrentPosition()) {
-            //     ctrack.draw(overlay);
-            // }
-
-            //Get current paramters and predict emotions
-            // var cp = ctrack.getCurrentParameters();
-            // var er = ec.meanPredict(cp);
-            // if (er) {
-            //     updateData(er);
-            //     for (var i = 0; i < er.length; i++) {
-            //         if (er[i].value > 0.4) {
-            //             document.getElementById('icon'+(i+1)).style.visibility = 'visible';
-            //         } else {
-            //             document.getElementById('icon'+(i+1)).style.visibility = 'hidden';
-            //         }
-            //     }
-            // }
         }
 
         function drawLoop() {

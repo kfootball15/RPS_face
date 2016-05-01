@@ -1,26 +1,30 @@
-app.controller('outcomePanelCtrl', function($scope, $stateParams, $state) {
+app.controller('outcomePanelCtrl', function($scope, $stateParams, $state, DogTagsFactory) {
 
     //Globals
     $scope.gameObj= $stateParams.myParam
-    $scope.result = $stateParams.myParam.result
+    console.log("outcomePanel Ctrl", $scope.gameObj);
+    $scope.result = $stateParams.myParam.result;
+    $scope.firstTimeLoser = true;
     var outcomeDiv = document.getElementById('outcomeDiv');
     var socket = io(window.location.origin);
 
 
     socket.on('goToDogTagState', function(gameObj){
-        //Need to create an emitter on the server
-        //Need to create an emitter in the LoserPanel for after the loser takes his/her picture
-        //Winner (and only winner, who would be the only one currently in this state) should $state.go to
-            //his dog tags page
-        //Persist the opponents dog tag to a database
-        //Loser should have a listener in the Loser Panel (could listen for the same event) and $state.go to his opponents dog tag state
 
+        console.log("goToDogTagState socket function: pre Create", $scope.result)
 
-        //Database post request first
-
-        //$state.go to the dogTag state
-        $state.go('dogTags', {myParam: gameObj});
-        console.log("Got into goToDogTagState socket on outcomePanel", gameObj)
+        if ($scope.result === 'winner'){
+            DogTagsFactory.newDogTag({
+                image: gameObj.dogTagImage,
+                user: gameObj.myInfo.id,
+                prompt: gameObj.prompt
+            })
+            .then(function(){
+                console.log("Got into goToDogTagState socket on outcomePanel", gameObj)
+                $state.go('dogTags', {id: gameObj.myInfo.id});
+                // $state.go('dogTags', {myParam: gameObj});
+            })
+        }
 
     });
 
@@ -48,7 +52,9 @@ app.controller('outcomePanelCtrl', function($scope, $stateParams, $state) {
             setInterval(function(){
                 $scope.timerCounter--
                 $scope.$digest();
-                if($scope.timerCounter < 1) {
+                if($scope.timerCounter < 1 && $scope.firstTimeLoser) {
+                    $scope.timerCounter = 10
+                    $scope.firstTimeLoser = false
                     $state.go('loserPanel', {myParam: $scope.gameObj});
                     return;
                 }
