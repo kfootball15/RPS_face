@@ -15,9 +15,17 @@ module.exports = function (server) {
         // Now have access to socket, wowzers!
         console.log("we have another connection", socket.id);
 
+        socket.broadcast.emit("opponentReceivedA")
+
+        socket.on('opponentReceivedB', function(){
+            socket.broadcast.emit("opponentReceivedB")
+        })
+
         socket.on('disconnect', function(){
             console.log("See ya...");
+            socket.broadcast.emit("opponentlost")
         });
+
 
         socket.on('sendFirst', function(obj){
             socket.broadcast.emit('infoReceived');

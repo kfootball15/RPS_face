@@ -1,5 +1,22 @@
 @import url(https://fonts.googleapis.com/css?family=Lato:300italic,700italic,300,700);
 
+#online {
+  height: 30px;
+  text-align: center;
+  font-weight: bold;
+  border-radius: 5px;
+  background-color: red !important;
+}
+
+#offline {
+  height: 30px;
+  text-align: center;
+  font-weight: bold;
+  border-radius: 5px;
+  background-color: green !important;
+}
+
+
 body {
     font-family: 'Lato';
     background-color: #f0f0f0;

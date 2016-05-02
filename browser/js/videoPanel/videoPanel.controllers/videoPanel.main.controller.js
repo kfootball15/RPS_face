@@ -3,7 +3,6 @@ app.controller('videoPanelCtrl', function($scope, $state, loggedInUser) {
 
         //SOCKETS
         // EMITTERS - my whiteboard.js
-        var socket = io(window.location.origin);
         // var canvas = document.getElementById('videoel');
         // var overlay = document.getElementById('overlay')
         var promptbutton = document.getElementById('promptButton');
@@ -13,24 +12,13 @@ app.controller('videoPanelCtrl', function($scope, $state, loggedInUser) {
         var overlayInstructionA = document.getElementById('overlayInstructionA');
         // var overlayCCInstructionA = overlayInstructionA.getContext('2d')
         $scope.loggedInUser = loggedInUser;
+        $scope.opponentReceived = false;
         $scope.showInstructionPrompt = true;
         $scope.showInstructionA = false;
         $scope.showInstructionB = false;
         $scope.waitingForOpponent = false;
         $scope.infoRecieved = false;
-        $scope.infoSent = false;
-        $scope.alreadyDecided = false;
         $scope.myInfo;
-
-        // vid.addEventListener('progress', function() {
-        //     var show = vid.currentTime>=5 && vid.currentTime<10;
-        //     overlayInstructionA.style.visibility = showInstructions? 'visible' : 'visible';
-        // }, false);
-
-        // $scope.runPrompt = function(){
-        //     $scope.canvasClickCounter++;
-        // }
-
 
         //Button/Div Event Listeners
         (function () {
@@ -59,7 +47,6 @@ app.controller('videoPanelCtrl', function($scope, $state, loggedInUser) {
                     $scope.waitingForOpponent = true;
                     $scope.$digest()
                     $scope.TakePicture();
-                    $scope.infoSent = true;
                     $scope.canvasClickCounter++;
                 }
             });
@@ -89,24 +76,16 @@ app.controller('videoPanelCtrl', function($scope, $state, loggedInUser) {
                         $scope.waitingForOpponent = true;
                         $scope.$digest()
                         $scope.TakePicture();
-                        $scope.infoSent = true;
                         $scope.canvasClickCounter++;
                     }
                 }
             });
 
-            // vid.addEventListener('conclusion', function (e) {
-            //     console.log("Sending conclusion Event!!!");
-            // });
-
-            // overlay.addEventListener('progress', function() {
-
-
-            // });
-
         })();
 
         //Socket Event Listeners
+        var socket = io(window.location.origin);
+
         socket.on('connect', function(){
             console.log('I have made a persistent two-way connection to the server!');
         });
@@ -124,7 +103,28 @@ app.controller('videoPanelCtrl', function($scope, $state, loggedInUser) {
             if(obj) $scope.theirInfo = obj;
             var gameObj = decideWinner();
             console.log("Got into decide Winner", gameObj);
+            //reset infoRecieved
+            $scope.infoRecieved = false;
             $state.go('outcomePanel', {myParam: gameObj});
+        });
+
+        socket.on('opponentReceivedA', function(){
+            console.log("opponentReceivedA Ran!!!")
+            $scope.opponentReceived = true;
+            socket.emit('opponentReceivedB')
+            $scope.$digest()
+        });
+
+        socket.on('opponentReceivedB', function(){
+            console.log("opponentReceivedB Ran!!!")
+            $scope.opponentReceived = true;
+            $scope.$digest()
+        });
+
+        socket.on('opponentlost', function(){
+            console.log("opponentlost Ran!!!")
+            $scope.opponentReceived = false;
+            $scope.$digest()
         });
 
 

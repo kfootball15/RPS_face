@@ -8,7 +8,7 @@ var schema = new mongoose.Schema({
     email: {
         type: String
     },
-    userName: {
+    username: {
         type: String,
         unique: true
     },
@@ -17,10 +17,6 @@ var schema = new mongoose.Schema({
     },
     salt: {
         type: String
-    },
-    UserDogTags: {
-        type: [mongoose.Schema.Types.ObjectId],
-        ref: 'DogTag'
     }
 
 });
